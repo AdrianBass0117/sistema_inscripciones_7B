@@ -10,6 +10,11 @@ use App\Models\Usuario;
 use App\Models\Notificacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+// --- INICIO CÓDIGO AGREGADO ---
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstadoDocumento;
+// --- FIN CÓDIGO AGREGADO ---
 
 class ErrorDocumentoController extends Controller
 {
@@ -26,7 +31,10 @@ class ErrorDocumentoController extends Controller
                 'descripcion_error' => 'required|string|min:10|max:500'
             ]);
 
-            $documento = Documento::findOrFail($request->id_documento);
+            // --- LÍNEA MODIFICADA ---
+            // Cargamos al usuario para poder enviarle el email
+            $documento = Documento::with('usuario')->findOrFail($request->id_documento);
+            // --- FIN LÍNEA MODIFICADA ---
 
             // Crear registro de error
             $error = Error::create([
@@ -42,6 +50,15 @@ class ErrorDocumentoController extends Controller
             $documento->save();
 
             DB::commit();
+
+            // --- INICIO CÓDIGO AGREGADO ---
+            try {
+                $motivo = $request->descripcion_error;
+                Mail::to($documento->usuario->email)->send(new EstadoDocumento($documento, 'rechazado', $motivo));
+            } catch (\Exception $e) {
+                Log::error('Error al enviar correo de documento rechazado: ' . $e->getMessage());
+            }
+            // --- FIN CÓDIGO AGREGADO ---
 
             return response()->json([
                 'success' => true,

@@ -8,6 +8,11 @@ use App\Models\Documento;
 use App\Models\Error;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+// --- INICIO CÓDIGO AGREGADO ---
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstadoDocumento;
+// --- FIN CÓDIGO AGREGADO ---
 
 class ValidacionController extends Controller
 {
@@ -259,7 +264,9 @@ class ValidacionController extends Controller
         try {
             DB::beginTransaction();
 
-            $documento = Documento::findOrFail($id);
+            // --- LÍNEA MODIFICADA ---
+            $documento = Documento::with('usuario')->findOrFail($id);
+            // --- FIN LÍNEA MODIFICADA ---
 
             // Actualizar estado del documento
             $documento->estado = Documento::ESTADO_APROBADO;
@@ -272,6 +279,14 @@ class ValidacionController extends Controller
             $this->verificarEstadoUsuario($documento->id_usuario);
 
             DB::commit();
+
+            // --- INICIO CÓDIGO AGREGADO ---
+            try {
+                Mail::to($documento->usuario->email)->send(new EstadoDocumento($documento, 'aceptado'));
+            } catch (\Exception $e) {
+                Log::error('Error al enviar correo de documento aceptado: ' . $e->getMessage());
+            }
+            // --- FIN CÓDIGO AGREGADO ---
 
             return response()->json([
                 'success' => true,
@@ -322,6 +337,7 @@ class ValidacionController extends Controller
             }
         } catch (\Exception $e) {
             // Log del error si es necesario
+            Log::error('Error en verificarEstadoUsuario: ' . $e->getMessage(), ['id_usuario' => $idUsuario]);
         }
     }
 
@@ -359,6 +375,19 @@ class ValidacionController extends Controller
             ]);
 
             DB::commit();
+
+            // --- INICIO CÓDIGO AGREGADO ---
+            // Re-leemos el documento con el usuario para asegurar que tenemos los datos
+            $documentoConUsuario = Documento::with('usuario')->find($id);
+            if ($documentoConUsuario) {
+                try {
+                    $motivo = $request->motivo;
+                    Mail::to($documentoConUsuario->usuario->email)->send(new EstadoDocumento($documentoConUsuario, 'rechazado', $motivo));
+                } catch (\Exception $e) {
+                    Log::error('Error al enviar correo de documento rechazado (desde rechazarDocumento): ' . $e->getMessage());
+                }
+            }
+            // --- FIN CÓDIGO AGREGADO ---
 
             return response()->json([
                 'success' => true,

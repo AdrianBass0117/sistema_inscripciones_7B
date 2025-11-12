@@ -8,6 +8,10 @@ use App\Models\Disciplina;
 use App\Models\Documento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+// --- INICIO CÓDIGO AGREGADO ---
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstadoInscripcion;
+// --- FIN CÓDIGO AGREGADO ---
 
 class ValidacionAspirantesController extends Controller
 {
@@ -17,6 +21,7 @@ class ValidacionAspirantesController extends Controller
     public function index()
     {
         try {
+            // ... (código sin cambios) ...
             // Obtener todas las inscripciones EXCLUYENDO cancelados
             $inscripciones = Inscripcion::with(['usuario', 'disciplina'])
                 ->where('estado', '!=', Inscripcion::ESTADO_CANCELADO)
@@ -94,15 +99,13 @@ class ValidacionAspirantesController extends Controller
         try {
             $inscripcion = Inscripcion::with(['usuario', 'disciplina'])->findOrFail($idInscripcion);
 
-            // Verificar que la inscripción esté pendiente
+            // ... (verificaciones sin cambios) ...
             if (!$inscripcion->estaPendiente()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Solo se pueden aceptar inscripciones pendientes.'
                 ], 422);
             }
-
-            // Verificar si la disciplina aún tiene cupo disponible
             $disciplina = $inscripcion->disciplina;
             if (!$disciplina->tieneCupoDisponible()) {
                 return response()->json([
@@ -110,6 +113,7 @@ class ValidacionAspirantesController extends Controller
                     'message' => 'La disciplina no tiene cupos disponibles.'
                 ], 422);
             }
+            // --- FIN CÓDIGO AGREGADO ---
 
             // Aceptar la inscripción
             $inscripcion->marcarComoAceptada();
@@ -119,6 +123,14 @@ class ValidacionAspirantesController extends Controller
                 'usuario_id' => $inscripcion->id_usuario,
                 'disciplina_id' => $inscripcion->id_disciplina
             ]);
+
+            // --- INICIO CÓDIGO AGREGADO ---
+            try {
+                Mail::to($inscripcion->usuario->email)->send(new EstadoInscripcion($inscripcion, 'aceptado'));
+            } catch (\Exception $e) {
+                Log::error('Error al enviar correo de inscripción aceptada: ' . $e->getMessage());
+            }
+            // --- FIN CÓDIGO AGREGADO ---
 
             return response()->json([
                 'success' => true,
@@ -143,7 +155,7 @@ class ValidacionAspirantesController extends Controller
         try {
             $inscripcion = Inscripcion::with(['usuario', 'disciplina'])->findOrFail($idInscripcion);
 
-            // Verificar que la inscripción esté pendiente
+            // ... (verificaciones sin cambios) ...
             if (!$inscripcion->estaPendiente()) {
                 return response()->json([
                     'success' => false,
@@ -159,6 +171,14 @@ class ValidacionAspirantesController extends Controller
                 'usuario_id' => $inscripcion->id_usuario,
                 'disciplina_id' => $inscripcion->id_disciplina
             ]);
+
+            // --- INICIO CÓDIGO AGREGADO ---
+            try {
+                Mail::to($inscripcion->usuario->email)->send(new EstadoInscripcion($inscripcion, 'rechazado'));
+            } catch (\Exception $e) {
+                Log::error('Error al enviar correo de inscripción rechazada: ' . $e->getMessage());
+            }
+            // --- FIN CÓDIGO AGREGADO ---
 
             return response()->json([
                 'success' => true,
@@ -217,6 +237,8 @@ class ValidacionAspirantesController extends Controller
             ], 500);
         }
     }
+
+    // ... (El resto de métodos: verDocumento, descargarDocumento, obtenerEstadisticas sin cambios) ...
 
     /**
      * Ver documento
@@ -341,6 +363,4 @@ class ValidacionAspirantesController extends Controller
             ], 500);
         }
     }
-
-
 }

@@ -111,14 +111,30 @@ return [
     |
     */
 
+    // --- ESTA ES LA SECCIÓN CORREGIDA ---
     'passwords' => [
-        'users' => [
+        'users' => [ // Para App\Models\Usuario
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        'comites' => [ // Para App\Models\Comite
+            'provider' => 'comites', 
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'supervisores' => [ // Para App\Models\Supervisor
+            'provider' => 'supervisores',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
+    // --- FIN DE LA SECCIÓN CORREGIDA ---
 
     /*
     |--------------------------------------------------------------------------

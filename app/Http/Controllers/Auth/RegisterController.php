@@ -18,6 +18,10 @@ use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+// --- INICIO CÓDIGO AGREGADO ---
+use Illuminate\Support\Facades\Mail;
+use App\Mail\BienvenidaUsuario;
+// --- FIN CÓDIGO AGREGADO ---
 
 class RegisterController extends Controller
 {
@@ -28,7 +32,7 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
-        // Validación de campos con mensajes personalizados
+        // ... (Validación de campos sin cambios) ...
         $validatedData = $request->validate([
             'nombre' => 'required|string|max:255|regex:/^[\pL\s\-\.]+$/u',
             'numero_trabajador' => 'required|string|max:50|unique:usuarios,numero_trabajador|regex:/^[A-Z0-9\-]+$/',
@@ -67,7 +71,7 @@ class RegisterController extends Controller
             'cfdi' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'fotografia' => 'required|file|mimes:jpg,jpeg,png|max:2048',
         ], [
-            // ... mensajes personalizados existentes (sin cambios) ...
+            // ... (mensajes personalizados sin cambios) ...
             'nombre.required' => 'El campo nombre completo es obligatorio.',
             'nombre.regex' => 'El nombre solo puede contener letras, espacios, guiones y puntos.',
             'numero_trabajador.required' => 'El número de trabajador es obligatorio.',
@@ -96,25 +100,21 @@ class RegisterController extends Controller
             'password.regex' => 'La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial (@$!%*?&).',
             'terms.required' => 'Debes aceptar los términos y condiciones.',
             'terms.accepted' => 'Debes aceptar los términos y condiciones.',
-
-            // Mensajes para archivos
             'constancia_laboral.required' => 'La constancia laboral es obligatoria.',
             'constancia_laboral.file' => 'La constancia laboral debe ser un archivo válido.',
             'constancia_laboral.mimes' => 'La constancia laboral debe ser un archivo PDF, JPG, JPEG o PNG.',
             'constancia_laboral.max' => 'La constancia laboral no debe pesar más de 5MB.',
-
             'cfdi.required' => 'El CFDI/Recibo de nómina es obligatorio.',
             'cfdi.file' => 'El CFDI/Recibo debe ser un archivo válido.',
             'cfdi.mimes' => 'El CFDI/Recibo debe ser un archivo PDF, JPG, JPEG o PNG.',
             'cfdi.max' => 'El CFDI/Recibo no debe pesar más de 5MB.',
-
             'fotografia.required' => 'La fotografía del rostro es obligatoria.',
             'fotografia.file' => 'La fotografía debe ser un archivo válido.',
             'fotografia.mimes' => 'La fotografía debe ser un archivo JPG, JPEG o PNG.',
             'fotografia.max' => 'La fotografía no debe pesar más de 2MB.',
         ]);
 
-        // Validación adicional para fecha de nacimiento
+        // ... (Validación adicional de fecha de nacimiento sin cambios) ...
         $fechaNacimiento = Carbon::parse($validatedData['fecha_nacimiento']);
         $edad = $fechaNacimiento->age;
 
@@ -128,7 +128,7 @@ class RegisterController extends Controller
                 ->withInput();
         }
 
-        // Validar CURP con API oficial
+        // ... (Validación CURP sin cambios) ...
         $validacionCURP = $this->validarCURPConAPI($validatedData['curp'], $validatedData['fecha_nacimiento']);
 
         if (!$validacionCURP['valida']) {
@@ -139,7 +139,7 @@ class RegisterController extends Controller
         DB::beginTransaction();
 
         try {
-            // Crear usuario (SOLO información básica para login)
+            // ... (Crear usuario sin cambios) ...
             $usuario = Usuario::create([
                 'numero_trabajador' => strtoupper($validatedData['numero_trabajador']),
                 'nombre_completo' => trim($validatedData['nombre']),
@@ -149,16 +149,16 @@ class RegisterController extends Controller
                 'curp' => strtoupper($validatedData['curp']),
                 'telefono' => $validatedData['telefono'],
                 'antiguedad' => $validatedData['antiguedad'],
-                'estado_cuenta' => Usuario::ESTADO_PENDIENTE, // Estado general pendiente
+                'estado_cuenta' => Usuario::ESTADO_PENDIENTE,
             ]);
 
-            // CREAR VALIDACIÓN DE INFORMACIÓN PERSONAL (NUEVO)
+            // ... (Crear validación sin cambios) ...
             ValidacionInformacionPersonal::crearValidacionPendiente($usuario->id_usuario);
 
-            // Subir documentos (se mantiene igual)
+            // ... (Subir documentos sin cambios) ...
             $this->subirDocumentos($usuario, $request);
 
-            // Crear notificación para el comité (actualizada)
+            // ... (Crear notificación sin cambios) ...
             Notificacion::create([
                 'tipo' => 'registro',
                 'destinatarios' => 'comite',
@@ -170,12 +170,21 @@ class RegisterController extends Controller
 
             DB::commit();
 
+            // --- INICIO CÓDIGO AGREGADO ---
+            try {
+                Mail::to($usuario->email)->send(new BienvenidaUsuario($usuario));
+            } catch (\Exception $e) {
+                Log::error('Error al enviar correo de bienvenida: ' . $e->getMessage());
+                // No detenemos el flujo si el correo falla, solo lo registramos.
+            }
+            // --- FIN CÓDIGO AGREGADO ---
+
             return redirect()->route('login')
                 ->with('success', '¡Registro exitoso! Tu información personal y documentos están pendientes de validación. Te notificaremos por correo electrónico cuando sean revisados.');
         } catch (\Exception $e) {
             DB::rollBack();
 
-            // Eliminar archivos subidos en caso de error
+            // ... (Eliminar documentos en error sin cambios) ...
             if (isset($usuario)) {
                 $this->eliminarDocumentos($usuario);
             }
@@ -184,6 +193,8 @@ class RegisterController extends Controller
                 ->withInput();
         }
     }
+
+    // ... (El resto de métodos: validarCURPConAPI, validarCURPLocal, subirDocumentos, eliminarDocumentos, checkEmail sin cambios) ...
 
     /**
      * Valida la CURP usando la API oficial del gobierno mexicano

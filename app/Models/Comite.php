@@ -5,11 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use App\Notifications\CustomResetPasswordNotification;
+// --- INICIO CÓDIGO AGREGADO ---
+use Illuminate\Notifications\Notifiable; // <-- AÑADE ESTA LÍNEA
+// --- FIN CÓDIGO AGREGADO ---
 
-class Comite extends Authenticatable
+class Comite extends Authenticatable implements CanResetPasswordContract
 {
-    use HasFactory;
-
+    // --- LÍNEA MODIFICADA ---
+    use HasFactory, CanResetPassword, Notifiable; // <-- AÑADE NOTIFIABLE AQUÍ
+    // --- FIN LÍNEA MODIFICADA ---
+    
     protected $table = 'comite';
 
     protected $primaryKey = 'id_comite';
@@ -63,6 +71,17 @@ class Comite extends Authenticatable
     public function getEmailForPasswordReset()
     {
         return $this->email;
+    }
+
+    /**
+     * Enviar la notificación de reseteo de contraseña.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomResetPasswordNotification($token, $this->email));
     }
 
     /**

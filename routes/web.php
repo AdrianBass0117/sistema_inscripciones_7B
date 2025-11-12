@@ -15,6 +15,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\ValidacionController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\PasswordResetController;
 
 // Página de inicio pública
 Route::get('/', function () {
@@ -49,14 +50,35 @@ Route::get('/user-photo/{userId}', [App\Http\Controllers\ImageController::class,
 // Logout (accesible para todos los autenticados)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Rutas de recuperación de contraseña
-Route::get('/forgot-password', function () {
-    return view('auth.forgot-password');
-})->name('password.request');
 
-Route::get('/reset-password', function () {
-    return view('auth.reset-password');
-})->name('password.reset');
+// --- BLOQUE DE RUTAS DE CONTRASEÑA CORREGIDO ---
+/*
+|--------------------------------------------------------------------------
+| Rutas de Reseteo de Contraseña
+|--------------------------------------------------------------------------
+*/
+
+// Muestra el formulario "Olvidé mi contraseña" (forgot-password.blade.php)
+Route::get('/forgot-password', [PasswordResetController::class, 'showLinkRequestForm'])
+    ->middleware('guest')
+    ->name('password.request');
+
+// Maneja el envío del formulario para enviar el enlace
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+    ->middleware('guest')
+    ->name('password.email');
+
+// Muestra el formulario para ingresar la nueva contraseña (reset-password.blade.php)
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
+    ->middleware('guest')
+    ->name('password.reset');
+
+// Maneja el envío del formulario con la nueva contraseña
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
+    ->middleware('guest')
+    ->name('password.update');
+// --- FIN DEL BLOQUE CORREGIDO ---
+
 
 // ================= RUTAS PROTEGIDAS =================
 

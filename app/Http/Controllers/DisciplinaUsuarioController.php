@@ -10,6 +10,10 @@ use App\Models\HistorialDisciplina;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+// --- INICIO CÓDIGO AGREGADO ---
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstadoInscripcion;
+// --- FIN CÓDIGO AGREGADO ---
 
 class DisciplinaUsuarioController extends Controller
 {
@@ -18,6 +22,7 @@ class DisciplinaUsuarioController extends Controller
      */
     public function index()
     {
+        // ... (código sin cambios) ...
         // Obtener el ID del usuario de la sesión como fallback
         $userId = session('user_id');
 
@@ -93,6 +98,7 @@ class DisciplinaUsuarioController extends Controller
         $idDisciplina = $request->id_disciplina;
         $disciplina = Disciplina::findOrFail($idDisciplina);
 
+        // ... (todas las validaciones de cupo, fecha, etc. sin cambios) ...
         // Verificar si la disciplina está activa
         if (!$disciplina->estaActiva()) {
             return response()->json([
@@ -174,6 +180,16 @@ class DisciplinaUsuarioController extends Controller
                 'created_at' => now(),
             ]);
 
+            // --- INICIO CÓDIGO AGREGADO ---
+            // Cargamos la relación disciplina que necesitamos para el correo
+            $inscripcion->load('disciplina'); 
+            try {
+                Mail::to($usuario->email)->send(new EstadoInscripcion($inscripcion, 'pendiente'));
+            } catch (\Exception $e) {
+                Log::error('Error al enviar correo de inscripción pendiente: ' . $e->getMessage());
+            }
+            // --- FIN CÓDIGO AGREGADO ---
+
             return response()->json([
                 'success' => true,
                 'message' => 'Inscripción realizada correctamente. Estado: Pendiente',
@@ -192,6 +208,8 @@ class DisciplinaUsuarioController extends Controller
         }
     }
 
+    // ... (El resto de métodos: cancelarInscripcion, obtenerDisciplina, inscripciones, etc. sin cambios) ...
+    
     /**
      * Cancelar inscripción (solo si está pendiente)
      */
