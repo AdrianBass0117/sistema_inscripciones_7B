@@ -351,7 +351,7 @@
                         @enderror
                     </div>
 
-                    <button type="submit" class="auth-btn primary" data-scroll data-scroll-delay="250">
+                    <button type="submit" class="auth-btn primary">
                         <i class="fas fa-user-plus"></i>
                         <span class="btn-text">Crear Cuenta</span>
                         <div class="btn-loading">

@@ -726,7 +726,7 @@
                         </a>
                     </div>
 
-                    <button type="submit" class="auth-btn primary" data-scroll data-scroll-delay="150">
+                    <button type="submit" class="auth-btn primary">
                         <i class="fas fa-sign-in-alt"></i>
                         <span class="btn-text">Iniciar Sesión</span>
                         <div class="btn-loading">
@@ -936,14 +936,15 @@
                 const formData = new FormData(authForm);
 
                 fetch('{{ route('login.submit') }}', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
+    method: 'POST',
+    body: formData,
+    headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    },
+    credentials: 'same-origin' // Añade esta línea
+})
                     .then(response => {
                         // Verificar si la respuesta es JSON
                         const contentType = response.headers.get('content-type');

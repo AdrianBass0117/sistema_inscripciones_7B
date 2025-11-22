@@ -433,10 +433,10 @@
 
                 <div class="nav-section">
                     <div class="nav-title">Cuenta</div>
-                    <a href="{{ route('personal.cuenta') }}" class="nav-item">
+                    <!-- <a href="{{ route('personal.cuenta') }}" class="nav-item">
                         <i class="fas fa-user-cog"></i>
                         <span>Perfil</span>
-                    </a>
+                    </a> -->
                     <a href="#" class="nav-item" id="logout-btn">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Cerrar Sesión</span>
