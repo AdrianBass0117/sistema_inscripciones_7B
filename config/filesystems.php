@@ -60,6 +60,15 @@ return [
             'report' => false,
         ],
 
+        'ftps_seguro' => [
+            'driver' => 'ftp',
+            'host' => 'servidor-remoto.com',
+            'username' => 'usuario',
+            'password' => 'pass',
+            'ssl' => true, // <--- ESTO ACTIVA EL PROTOCOLO FTPS
+            'root' => '',
+        ],
+
     ],
 
     /*

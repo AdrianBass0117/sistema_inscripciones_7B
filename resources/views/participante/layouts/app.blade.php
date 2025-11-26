@@ -429,6 +429,10 @@
                         <i class="fas fa-history"></i>
                         <span>Historial</span>
                     </a>
+                    <a href="{{ route('personal.tarjetas') }}" class="nav-item">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Métodos de Pago (SET)</span>
+                    </a>
                 </div>
 
                 <div class="nav-section">

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.check' => App\Http\Middleware\CheckAuth::class,
             'auth.guest' => App\Http\Middleware\RedirectIfAuthenticated::class,
+            'ipsec' => \App\Http\Middleware\CheckIpsecTunnel::class,
         ]);
 
         // Middleware global para todas las rutas web

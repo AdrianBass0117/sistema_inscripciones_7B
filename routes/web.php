@@ -16,6 +16,63 @@ use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\ValidacionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\PasswordResetController;
+use Laravel\Socialite\Facades\Socialite;
+use App\Models\Usuario;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ProtocolosController;
+
+// 1. Redirigir al proveedor (GitHub)
+Route::get('/auth/github', function () {
+    return Socialite::driver('github')->redirect();
+})->name('login.github');
+
+// 2. Recibir la respuesta (Callback)
+Route::get('/auth/github/callback', function () {
+    try {
+        // Aquí obtenemos el usuario de GitHub usando el protocolo OAuth
+        $githubUser = Socialite::driver('github')->user();
+        
+        // Buscamos si ya existe o lo creamos (Lógica simplificada para demo)
+        $user = Usuario::where('email', $githubUser->getEmail())->first();
+        
+        if(!$user) {
+            return redirect()->route('login')->with('error', 'Tu correo de GitHub no está registrado en el sistema.');
+        }
+
+        // Iniciar sesión
+        session([
+            'user_type' => 'usuario', // Asumimos que es usuario
+            'user_id' => $user->id_usuario,
+            'user_email' => $user->email,
+        ]);
+
+        return redirect()->route('personal');
+        
+    } catch (\Exception $e) {
+        return redirect()->route('login')->with('error', 'Error en autenticación OAuth');
+    }
+});
+
+// === PROTOCOLOS DE SEGURIDAD ===
+
+// Grupo de pruebas de protocolos
+Route::get('/proto/smtps', [ProtocolosController::class, 'testSMTPS']);
+Route::get('/proto/ssh', [ProtocolosController::class, 'testSSHReal']);
+Route::get('/proto/sftp', [ProtocolosController::class, 'testSFTPReal']);
+Route::get('/proto/scp', [ProtocolosController::class, 'testSCP']);
+Route::get('/proto/ftps', [ProtocolosController::class, 'testFTPS']);
+Route::get('/proto/imaps', [ProtocolosController::class, 'testIMAPS_Socket']);
+Route::get('/proto/set', [ProtocolosController::class, 'demoTransaccionSET']);
+Route::get('/proto/firmas', [ProtocolosController::class, 'testFirmaDigital']);     // <-- Verifica esta
+Route::get('/proto/certificados', [ProtocolosController::class, 'testCertificados']); // <-- Nueva
+
+// IPSEC
+Route::get('/proto/ipsec-check', function() {
+    return response()->json([
+        'estado' => 'ACCESO PERMITIDO',
+        'mensaje' => 'Túnel IPSEC Validado (Middleware).'
+    ]);
+})->middleware('ipsec');
 
 // Página de inicio pública
 Route::get('/', function () {
@@ -201,6 +258,16 @@ Route::middleware(['auth.check:usuario'])->group(function () {
         ->name('personal.cuenta.subir-documento-corregido');
     Route::post('/personal/cuenta/documentos/actualizar', [CuentaUsuarioController::class, 'actualizarDocumentos'])
         ->name('personal.cuenta.actualizar-documentos');
+
+    // Vista gráfica de SET
+    Route::get('/proto/set-visual', [ProtocolosController::class, 'vistaSET']);
+    Route::post('/proto/set-generar', [ProtocolosController::class, 'generarFirmaSET']);
+    // Gestión de Tarjetas (Protocolo SET)
+        Route::get('/personal/tarjetas', [CuentaUsuarioController::class, 'indexTarjetas'])
+            ->name('personal.tarjetas');
+            
+        Route::post('/personal/tarjetas', [CuentaUsuarioController::class, 'storeTarjeta'])
+            ->name('personal.tarjetas.store');
 });
 
 // RUTAS PARA COMITÉ
@@ -398,6 +465,19 @@ Route::middleware(['auth.check:supervisor'])->group(function () {
     Route::get('/Supervisor/Reportes', function () {
         return view('/supervisor.reportes');
     })->name('supervisor.reportes');
+
+    // Vista del Panel de Protocolos
+    Route::get('/Supervisor/protocolos', function () {
+        return view('supervisor.protocolos');
+    })->name('supervisor.protocolos');
+
+    // Blockchain
+    Route::get('/Supervisor/blockchain', [App\Http\Controllers\BlockchainController::class, 'index'])
+        ->name('supervisor.blockchain');
+    Route::post('/Supervisor/blockchain/hack/{id}', [App\Http\Controllers\BlockchainController::class, 'hackBlock'])
+        ->name('supervisor.blockchain.hack');
+    Route::post('/Supervisor/blockchain/repair', [App\Http\Controllers\BlockchainController::class, 'repairChain'])
+        ->name('supervisor.blockchain.repair');
 });
 
 // Ruta de home genérica (para cualquier usuario autenticado)

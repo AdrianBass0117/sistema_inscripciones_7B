@@ -9,6 +9,8 @@ use App\Models\Supervisor;
 use App\Models\Documento;
 use App\Models\Notificacion;
 use App\Models\Error;
+use App\Models\Tarjeta;
+use App\Models\BlockchainBlock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -516,5 +518,114 @@ class CuentaUsuarioController extends Controller
             ->where('id_usuario', $userId)
             ->orderBy('created_at', 'desc')
             ->first();
+    }
+
+    /**
+     * Mostrar vista de gestión de tarjetas (Protocolo SET)
+     */
+    public function indexTarjetas()
+    {
+        $userId = session('user_id');
+        $tarjetas = Tarjeta::where('id_usuario', $userId)->get();
+        return view('participante.tarjetas', compact('tarjetas'));
+    }
+
+    /**
+     * Guardar tarjeta generando Firma y Certificado (Simulación SET Completa)
+     */
+    public function storeTarjeta(Request $request)
+    {
+        $userId = session('user_id');
+        
+        $request->validate([
+            'titular' => 'required|string|max:100',
+            'numero' => 'required|string|min:16|max:16', // Simulación simple
+            'expiracion' => 'required|string',
+            'cvv' => 'required|string|max:4'
+        ]);
+
+        // 1. Enmascarar la tarjeta (Nunca guardar la real en texto plano)
+        $enmascarada = '**** **** **** ' . substr($request->numero, -4);
+        
+        // 2. GENERAR FIRMA DIGITAL (Principio de Integridad SET)
+        // Usamos HMAC-SHA256. Si un solo dato cambia, la firma no coincide.
+        $datosParaFirmar = $userId . $request->titular . $request->numero . $request->expiracion;
+        $secretoBanco = env('APP_KEY'); // Usamos la llave de la app como "secreto bancario"
+        $firmaDigital = hash_hmac('sha256', $datosParaFirmar, $secretoBanco);
+
+        // 3. GENERAR CERTIFICADO DIGITAL X.509
+        
+        $dn = [
+            "countryName" => "MX",
+            "stateOrProvinceName" => "Ciudad Universitaria",
+            "localityName" => "Campus",
+            "organizationName" => "Sistema SET Escolar",
+            "organizationalUnitName" => "Seguridad",
+            "commonName" => $request->titular,
+            "emailAddress" => session('user_email') ?? 'alumno@universidad.edu' // Fallback por si no hay email en sesión
+        ];
+
+        // CONFIGURACIÓN EXPLÍCITA PARA OPENSSL (Esto arregla el error en Windows)
+        // Intentamos detectar la ruta común de config en XAMPP/Windows
+        $configPath = 'C:/xampp/php/extras/ssl/openssl.cnf'; 
+        
+        // Si no existe en esa ruta (o estás en otro entorno), usamos null para que PHP intente buscarlo solo
+        // Pero definimos un array de configuración básico
+        $configArgs = array(
+            "digest_alg" => "sha256",
+            "private_key_bits" => 2048,
+            "private_key_type" => OPENSSL_KEYTYPE_RSA,
+        );
+
+        // Si encontramos el archivo de config, lo agregamos a los argumentos
+        if (file_exists($configPath)) {
+            $configArgs['config'] = $configPath;
+        }
+
+        // Generar llaves privada/pública
+        $privkey = openssl_pkey_new($configArgs);
+        
+        // VERIFICACIÓN DE ERRORES (Importante para debug)
+        if ($privkey === false) {
+            // Si falla, probablemente es por falta de openssl.cnf. 
+            // Intentamos forzar una ruta alternativa común o lanzar error descriptivo.
+            while ($msg = openssl_error_string()) echo $msg . "<br />\n";
+            throw new \Exception("Error al generar llaves privadas. Verifica tu configuración de OpenSSL.");
+        }
+
+        // Generar solicitud de firma (CSR)
+        $csr = openssl_csr_new($dn, $privkey, $configArgs); // ¡Pasamos $configArgs aquí también!
+
+        if ($csr === false) {
+            throw new \Exception("Error al generar CSR. Verifica openssl.cnf");
+        }
+
+        // Generar el certificado autofirmado
+        $sscert = openssl_csr_sign($csr, null, $privkey, 365, $configArgs); // ¡Y aquí también!
+
+        if ($sscert === false) {
+            throw new \Exception("Error al firmar el certificado.");
+        }
+
+        // Exportar
+        openssl_x509_export($sscert, $certout);
+
+        // 4. Guardar en Base de Datos
+        Tarjeta::create([
+            'id_usuario' => $userId,
+            'nombre_titular' => $request->titular,
+            'numero_enmascarado' => $enmascarada,
+            'hash_tarjeta' => hash('sha256', $request->numero), // Hash unidireccional
+            'firma_digital_set' => $firmaDigital,
+            'certificado_seguridad' => $certout
+        ]);
+
+        BlockchainBlock::addBlock([
+            'evento' => 'Registro Tarjeta SET',
+            'usuario' => $userId,
+            'titular' => $request->titular
+        ], 'TarjetaRegistrada');
+
+        return back()->with('success', 'Tarjeta registrada bajo el protocolo SET. Certificado y Firma generados.');
     }
 }

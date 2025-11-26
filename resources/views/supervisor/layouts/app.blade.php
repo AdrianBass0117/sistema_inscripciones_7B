@@ -428,6 +428,15 @@
                                 <i class="fas fa-chart-line"></i>
                                 <span>Estadisticas</span>
                             </a>
+                            <a href="{{ route('supervisor.protocolos') }}" class="nav-item">
+                                <i class="fas fa-network-wired"></i>
+                                <span>Monitor de Protocolos</span>
+                            </a>
+
+                            <a href="{{ route('supervisor.blockchain') }}" class="nav-item">
+                                <i class="fas fa-link"></i>
+                                <span>Blockchain Log</span>
+                            </a>
                         </div>
 
                         <div class="nav-section">

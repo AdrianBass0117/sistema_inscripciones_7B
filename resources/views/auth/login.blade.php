@@ -734,6 +734,10 @@
                         </div>
                     </button>
 
+                    <a href="{{ route('login.github') }}" class="auth-btn" style="background: #333; color: white; margin-top: 10px;">
+                        <i class="fab fa-github"></i> Iniciar con GitHub (OAuth)
+                    </a>
+
                     <div class="auth-footer">
                         <p>¿No tienes una cuenta?
                             <a href="{{ route('register') }}" class="auth-link">
